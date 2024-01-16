@@ -42,29 +42,138 @@ export default function() {
   const program = initShader(webgl,vertexString,fragmentString)!;
   webgl.viewport(0, 0, canvas_element.clientWidth, canvas_element.clientHeight);
 
+
+  let ModelMatrixx =mat4.create();
+  let ModelMatrixxy = mat4.create();
+  let ModelMatrix =mat4.create();
+  let ViewMatrix =mat4.create();
+  const projMat4 = mat4.create(); // 初始化一个4*4的矩阵
+  let mvMatrix =mat4.create();
+  let mvpMatrix =mat4.create();
+
+
+  let resistance:number = 0.1;
   let mouseDownX:number;
   let mouseDownY:number;
   let offsetX = 0;
   let offsetY = 0;
 
+  let rotateX:number = 0;
+  let rotateY:number = 0;
+
   let imgElement:HTMLImageElement;
 
 
-  let moveState = false
+  let moveState = false;
 
 
-  function mouseDown(e) {
+          //Float32Array 类型数组代表的是平JS内置的标准对象，为 32 位的浮点数型数组，其内容初始化为 0。一旦建立起来，你可以使用这个对象的方法对其元素进行操作，或者使用标准数组索引语法 (使用方括号)。https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
+  let pointPosition = new Float32Array([
+    // 前-左-上
+    -1,1,1,1,     1,1,0,1,    0,1,
+    // 前-左-下
+    -1,-1,1,1,    1,1,0,1,    0,0,
+    // 前-右-上
+    1,1,1,1,      1,1,0,1,    1,1,
+    
+    // 前-右-下 
+    1,-1,1,1,     1,1,0,1,    1,0,   
+    // 前-右-上
+    1,1,1,1,      1,1,0,1,    1,1,
+    // 前-左-下
+    -1,-1,1,1,    1,1,0,1,    0,0,
+
+
+    // 后-左-上
+    1,1,-1,1,     1,1,0,1,    0,1,
+    // 后-左-下
+    1,-1,-1,1,    1,1,0,1,    0,0,
+    // 后-右-上
+    -1,1,-1,1,    1,1,0,1,    1,1,
+    // 后-右-下
+    -1,-1,-1,1,   1,1,0,1,    1,0,   
+    // 后-右-上
+    -1,1,-1,1,    1,1,0,1,    1,1, 
+    // 后-左-下
+    1,-1,-1,1,    1,1,0,1,    0,0,
+
+
+    // 左-左-上
+    -1,-1,-1,1,   1,1,0,1,    0,1,
+    // 左-左-下
+    -1,-1,1,1,    1,1,0,1,    0,0,
+    // 左-右-上
+    -1,1,-1,1,    1,1,0,1,    1,1,
+    // 左-右-下
+    -1,1,1,1,     1,1,0,1,    1,0,     
+    // 左-右-上
+    -1,1,-1,1,    1,1,0,1,    1,1,     
+    // 左-左-下
+    -1,-1,1,1,    1,1,0,1,    0,0,
+
+
+    // 右-左-上
+    1,-1,1,1,     1,1,0,1,    0,1,
+    // 右-左-下
+    1,-1,-1,1,    1,1,0,1,    0,0,
+    // 右-右-上
+    1,1,1,1,      1,1,0,1,    1,1,
+    // 右-右-下
+    1,1,-1,1,     1,1,0,1,    1,0,  
+    // 右-右-上
+    1,1,1,1,      1,1,0,1,    1,1,        
+    // 右-左-下
+    1,-1,-1,1,    1,1,0,1,    0,0,
+
+
+
+    /**看单面 视图上方向需要改为x轴 */
+
+    // 上-左-上
+    -1,1,-1,1,    1,0,0,1,    0,1,
+    // 上-左-下
+    -1,1,1,1,     1,0,0,1,    0,0,
+    // 上-右-上
+    1,1,-1,1,     1,0,0,1,    1,1,
+    // 上-右-下
+    1,1,1,1,      1,0,0,1,    1,0,   
+    // 上-右-上
+    1,1,-1,1,     1,0,0,1,    1,1,    
+    // 上-左-下
+    -1,1,1,1,     1,0,0,1,    0,0,
+
+
+
+    // 下-左-上
+    1,-1,-1,1,   1,1,0,1,    0,1,
+    // 下-左-下
+    1,-1,1,1,  1,1,0,1,    0,0,
+    // 下-右-上
+    -1,-1,-1,1,    1,1,0,1,    1,1,
+    // 下-右-下
+    -1,-1,1,1,   1,1,0,1,   1,0,  
+    // 下-右-上
+    -1,-1,-1,1,    1,1,0,1,    1,1,    
+    // 下-左-下
+    1,-1,1,1,  1,1,0,1,    0,0,
+
+
+            
+  ]);
+
+
+  function mouseDown(e:MouseEvent) {
     moveState = true;
 
     mouseDownX = e.clientX;
     mouseDownY = e.clientY;
   }
-  function mouseMove(e) {
+  function mouseMove(e:MouseEvent) {
       if (!moveState) {
           return
       }else{
-          offsetX = e.clientX - mouseDownX;
-          offsetY = e.clientY - mouseDownY;
+          offsetX = (e.clientX - mouseDownX)*resistance;
+          offsetY = (e.clientY - mouseDownY)*resistance;
       }
       initBuffer();
       draw();
@@ -74,7 +183,9 @@ export default function() {
   function initEvent() {
     document.onmousedown = mouseDown;
     document.onmousemove = mouseMove;
-
+    document.onmouseup = function() {
+      moveState = false;
+    }
     
 }
 
@@ -109,105 +220,7 @@ export default function() {
     handleLoadedTexture(texture0,imgElement)
 
 
-        //Float32Array 类型数组代表的是平JS内置的标准对象，为 32 位的浮点数型数组，其内容初始化为 0。一旦建立起来，你可以使用这个对象的方法对其元素进行操作，或者使用标准数组索引语法 (使用方括号)。https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
-        let pointPosition = new Float32Array([
 
-
-
-
-        // 前-左-上
-        -1,1,1,1,   1,1,0,1,    0,1,
-        // 前-左-下
-        -1,-1,1,1,  1,1,0,1,    0,0,
-        // 前-右-上
-        1,1,1,1,    1,1,0,1,    1,1,
-        // 前-右-下
-        1,-1,1,1,   1,1,0,1,    1,0,   
-        // 前-左-下
-        -1,-1,1,1,  1,1,0,1,    0,0,
-        // 前-右-上
-        1,1,1,1,    1,1,0,1,    1,1,
-
-
-
-
-
-        // 后-左-上
-        -1,1,-1,1,   1,1,0,1,    0,1,
-        // 后-左-下
-        -1,-1,-1,1,  1,1,0,1,    0,0,
-        // 后-右-上
-        1,1,-1,1,    1,1,0,1,    1,1,
-        // 后-右-下
-        1,-1,-1,1,   1,1,0,1,    1,0,    
-        // 后-左-下
-        -1,-1,-1,1,  1,1,0,1,    0,0,
-        // 后-右-上
-        1,1,-1,1,    1,1,0,1,    1,1,
-
-
-        // 左-左-上
-        -1,-1,1,1,   1,1,0,1,    0,1,
-        // 左-左-下
-        -1,-1,-1,1,  1,1,0,1,    0,0,
-        // 左-右-上
-        -1,1,1,1,    1,1,0,1,    1,1,
-        // 左-右-下
-        -1,1,-1,1,   1,1,0,1,    1,0,      
-        // 左-左-下
-        -1,-1,-1,1,  1,1,0,1,    0,0,
-        // 左-右-上
-        -1,1,1,1,    1,1,0,1,    1,1,
-
-
-
-        // 右-左-上
-        1,-1,1,1,   1,1,0,1,    0,1,
-        // 右-左-下
-        1,-1,-1,1,  1,1,0,1,    0,0,
-        // 右-右-上
-        1,1,1,1,    1,1,0,1,    1,1,
-        // 右-右-下
-        1,1,-1,1,   1,1,0,1,    1,0,      
-        // 右-左-下
-        1,-1,-1,1,  1,1,0,1,    0,0,
-        // 右-右-上
-        1,1,1,1,    1,1,0,1,    1,1,
-
-
-
-
-        /**看单面 视图上方向需要改为x轴 */
-
-        // 上-左-上
-        -1,1,-1,1,   1,0,0,1,    0,1,
-        // 上-左-下
-        -1,1,1,1,  1,0,0,1,    0,0,
-        // 上-右-上
-        1,1,-1,1,    1,0,0,1,    1,1,
-        // 上-右-下
-        1,1,1,1,   1,0,0,1,       1,0,   
-        // 上-左-下
-        -1,1,1,1,  1,0,0,1,    0,0,
-        // 上-右-上
-        1,1,-1,1,    1,0,0,1,    1,1,
-
-
-        // 下-左-上
-        -1,-1,-1,1,   1,1,0,1,    0,1,
-        // 下-左-下
-        -1,-1,1,1,  1,1,0,1,    0,0,
-        // 下-右-上
-        1,-1,-1,1,    1,1,0,1,    1,1,
-        // 下-右-下
-        1,-1,1,1,   1,1,0,1,   1,0,  
-        // 下-左-下
-        -1,-1,1,1,  1,1,0,1,    0,0,
-        // 下-右-上
-        1,-1,-1,1,    1,1,0,1,    1,1,
-
-                
-        ]);
 
 
         let aPosition = webgl.getAttribLocation(program, "a_position");
@@ -226,10 +239,10 @@ export default function() {
         webgl.vertexAttribPointer(aColor,4, webgl.FLOAT, false, 10*4, 4*4);
 
 
-        const projMat4 = mat4.create(); // 初始化一个4*4的矩阵
+
         mat4.identity(projMat4); 
         let uniforproj = webgl.getUniformLocation(program, "proj");
-        mat4.perspective(projMat4,30 * Math.PI / 180,canvas_element.clientWidth/canvas_element.clientHeight,1,1000)
+        mat4.perspective(projMat4,60 * Math.PI / 180,canvas_element.clientWidth/canvas_element.clientHeight,1,1000)
 
 
         const uvAttributeLocation = webgl.getAttribLocation(program, 'a_uv');
@@ -239,35 +252,39 @@ export default function() {
         webgl.vertexAttribPointer(uvAttributeLocation, 2, webgl.FLOAT, false, 10*4, 4*8);
 
 
-        let ModelMatrix =mat4.create();
+        
         mat4.identity(ModelMatrix);
 
 
+        rotateX = rotateX+offsetX * Math.PI / 180;
+        rotateY = rotateY+offsetY * Math.PI / 180;
 
-        let ModelMatrixx =mat4.create();
+        
         mat4.identity(ModelMatrixx);
-        mat4.rotate(ModelMatrixx,ModelMatrixx,offsetX * Math.PI / 180,[1,0,0]);
+        mat4.rotate(ModelMatrixx,ModelMatrixx,rotateY,[1,0,0]);
 
         let ModelMatrixy =mat4.create();
         mat4.identity(ModelMatrixy);
-        mat4.rotate(ModelMatrixy,ModelMatrixy,offsetY * Math.PI / 180,[0,1,0]);
+        mat4.rotate(ModelMatrixy,ModelMatrixy,rotateX,[0,1,0]);
 
 
-        let ModelMatrixxy = mat4.create();
+
         mat4.identity(ModelMatrixxy);
         mat4.multiply(ModelMatrixxy,ModelMatrixx,ModelMatrixy);
 
 
 
-        let ViewMatrix =mat4.create();
+
         mat4.identity(ViewMatrix);
-        mat4.lookAt(ViewMatrix, [5, 5, 5], [0, 0, 0], [0, 1, 0]);
+        mat4.lookAt(ViewMatrix, [0, 0, 5], [0, 0, 0], [0, 1, 0]);
 
+        mat4.identity(mvMatrix);
 
-        let mvpMatrix =mat4.create();
+        mat4.multiply(mvMatrix,ViewMatrix,ModelMatrixxy)
+
         mat4.identity(mvpMatrix);
 
-        mat4.multiply(mvpMatrix,projMat4,ViewMatrix)
+        mat4.multiply(mvpMatrix,projMat4,mvMatrix)
 
         webgl.uniformMatrix4fv(uniforproj, false, mvpMatrix);
         
@@ -277,8 +294,9 @@ export default function() {
       webgl.clearColor(0, 0, 0, 1);
       webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
       webgl.enable(webgl.DEPTH_TEST);
-      
-      webgl.drawArrays(webgl.TRIANGLES, 0, 30);
+      webgl.enable(webgl.CULL_FACE);
+      webgl.cullFace(webgl.BACK);
+      webgl.drawArrays(webgl.TRIANGLES, 0, 36);
   }
 
 
