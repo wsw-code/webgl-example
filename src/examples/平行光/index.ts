@@ -266,30 +266,10 @@ export default function() {
 }
 
 
-  function handleLoadedTexture(texture:WebGLTexture,image:TexImageSource ) {
-
-
-    webgl.bindTexture(webgl.TEXTURE_2D, texture);
-    webgl.texImage2D(webgl.TEXTURE_2D, 0, webgl.RGBA, webgl.RGBA, webgl.UNSIGNED_BYTE, image);
-    webgl.texParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MAG_FILTER, webgl.NEAREST);
-    webgl.texParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MIN_FILTER, webgl.NEAREST);
-    // ，REPEAT 模式对纹理图片的尺寸有要求，宽度和高度必须为 2 的整数次幂，如 32x32 或 1024x256 的图片 
-    // logo 图片为200 x 288 不符合，使用REPEAT会不展示图片
-    webgl.texParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_S, webgl.CLAMP_TO_EDGE);
-    webgl.texParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_T, webgl.CLAMP_TO_EDGE);
-    //因为异步原因所以要加在这里
-    // webgl.uniform1i(WebGLUniformLocation, 0);
-   
-  }
-
   function initBuffer() {
-
-    
-
 
     let aPosition = webgl.getAttribLocation(program, "a_position");
     let aColor = webgl.getAttribLocation(program, "a_color");
-
     let trangleBuffer =  webgl.createBuffer();
     webgl.bindBuffer(webgl.ARRAY_BUFFER,trangleBuffer);
     webgl.bufferData(webgl.ARRAY_BUFFER,pointPosition,webgl.STATIC_DRAW);
@@ -297,14 +277,9 @@ export default function() {
     webgl.vertexAttribPointer(aPosition,4, webgl.FLOAT, false, 8*4, 0);
     webgl.enableVertexAttribArray(aColor);
     webgl.vertexAttribPointer(aColor,4, webgl.FLOAT, false, 8*4, 4*4);
-
     mat4.identity(projMat4); 
     let uniforproj = webgl.getUniformLocation(program, "proj");
     mat4.perspective(projMat4,60 * Math.PI / 180,canvas_element.clientWidth/canvas_element.clientHeight,1,1000)
-
-
-
-
     mat4.identity(ModelMatrix);
 
     rotateX = rotateX + offsetX * Math.PI / 180;
@@ -342,9 +317,7 @@ export default function() {
     let u_LightDirection = webgl.getUniformLocation(program, 'u_LightDirection');
     webgl.uniform3fv(u_LightDirection, [0.0, 0.0, 2.0]);
 
-    
     let aNormal = webgl.getAttribLocation(program, "a_normal");
-   
     let normalBuffer =  webgl.createBuffer();
     webgl.bindBuffer(webgl.ARRAY_BUFFER,normalBuffer);
     webgl.bufferData(webgl.ARRAY_BUFFER,normals,webgl.STATIC_DRAW);
@@ -354,24 +327,15 @@ export default function() {
     let u_AmbientLight = webgl.getUniformLocation(program, 'u_AmbientLight');
     webgl.uniform3f(u_AmbientLight, 0.2, 0.2, 0.2);
 
-
-    
     let u_normalMatrix = webgl.getUniformLocation(program, 'u_normalMatrix');
     webgl.uniform3f(u_normalMatrix, 0.2, 0.2, 0.2);
-
-
-
 
     let normalMatrix = mat4.create();
     mat4.identity(normalMatrix);
     mat4.invert(normalMatrix,ModelMatrixxy)
     mat4.transpose(normalMatrix,normalMatrix)
+    webgl.uniformMatrix4fv(u_normalMatrix,false,normalMatrix)
 
-  webgl.uniformMatrix4fv(u_normalMatrix,false,normalMatrix)
-
-
-    
-    
   }
 
   function draw() {
