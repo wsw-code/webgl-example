@@ -1,6 +1,6 @@
   
 import {initCanvas,initWebgl,initShader} from '../../utils'
-import {mat4} from 'gl-matrix'
+import {mat3, mat4} from 'gl-matrix'
 import Img from '../../images/close-icon.png'
 
 
@@ -17,21 +17,42 @@ import Img from '../../images/close-icon.png'
     uniform mat4 proj;
     attribute vec4 a_color;
     varying vec4 v_color;
-    attribute vec2 a_uv;
-    varying vec2 v_uv;
+    // 表面法向量
+    attribute vec4 a_normal;
+    // 平行光颜色
+    uniform vec3 u_LightColor;
+    // 环境光颜色
+    uniform vec3 u_AmbientLight;
+    //归一化的世界坐标
+    uniform vec3 u_LightDirection;
+
+
+    uniform mat4 u_normalMatrix;
+
+
+
     void main(){
-        v_uv = a_uv;
+        // vec3 normal = normalize(a_normal.xyz);
+        vec3 normal = normalize(vec3(u_normalMatrix * a_normal));
+        vec3 LightDirection = normalize(u_LightDirection.xyz);
+        // 计算光线方向和法向量的点积
+        float nDotL = max(dot(LightDirection,normal),0.0);
+
+        // 计算漫反射光的颜色
+        vec3 diffuse = u_LightColor * a_color.rgb * nDotL;
+        // 计算环境光颜色
+        vec3 ambient = u_AmbientLight * a_color.rgb;
+
         gl_Position = proj * a_position;
-        v_color = a_color;
+        v_color = vec4(diffuse+ambient,1.0);
     }
     `;
   const fragmentString = `
   precision mediump float;
-  uniform sampler2D texture0;
-  varying vec2 v_uv;
+
   varying vec4 v_color;
     void main(){
-      gl_FragColor = texture2D(texture0,v_uv) * v_color;
+      gl_FragColor =  v_color;
     }
     `; // 片元着色器
 
@@ -70,96 +91,151 @@ export default function() {
           //Float32Array 类型数组代表的是平JS内置的标准对象，为 32 位的浮点数型数组，其内容初始化为 0。一旦建立起来，你可以使用这个对象的方法对其元素进行操作，或者使用标准数组索引语法 (使用方括号)。https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
   let pointPosition = new Float32Array([
     // 前-左-上
-    -1,1,1,1,     1,1,0,1,    0,1,
+    -1,1,1,1,     1,1,0,1,
     // 前-左-下
-    -1,-1,1,1,    1,1,0,1,    0,0,
+    -1,-1,1,1,    1,1,0,1,
     // 前-右-上
-    1,1,1,1,      1,1,0,1,    1,1,
+    1,1,1,1,      1,1,0,1,
     
     // 前-右-下 
-    1,-1,1,1,     1,1,0,1,    1,0,   
+    1,-1,1,1,     1,1,0,1, 
     // 前-右-上
-    1,1,1,1,      1,1,0,1,    1,1,
+    1,1,1,1,      1,1,0,1,
     // 前-左-下
-    -1,-1,1,1,    1,1,0,1,    0,0,
+    -1,-1,1,1,    1,1,0,1,
 
 
     // 后-左-上
-    1,1,-1,1,     1,1,0,1,    0,1,
+    1,1,-1,1,     1,1,0,1,
     // 后-左-下
-    1,-1,-1,1,    1,1,0,1,    0,0,
+    1,-1,-1,1,    1,1,0,1, 
     // 后-右-上
-    -1,1,-1,1,    1,1,0,1,    1,1,
+    -1,1,-1,1,    1,1,0,1,    
     // 后-右-下
-    -1,-1,-1,1,   1,1,0,1,    1,0,   
+    -1,-1,-1,1,   1,1,0,1,      
     // 后-右-上
-    -1,1,-1,1,    1,1,0,1,    1,1, 
+    -1,1,-1,1,    1,1,0,1,    
     // 后-左-下
-    1,-1,-1,1,    1,1,0,1,    0,0,
+    1,-1,-1,1,    1,1,0,1,    
 
 
     // 左-左-上
-    -1,-1,-1,1,   1,1,0,1,    0,1,
+    -1,-1,-1,1,   1,1,0,1,    
     // 左-左-下
-    -1,-1,1,1,    1,1,0,1,    0,0,
+    -1,-1,1,1,    1,1,0,1,    
     // 左-右-上
-    -1,1,-1,1,    1,1,0,1,    1,1,
+    -1,1,-1,1,    1,1,0,1,    
     // 左-右-下
-    -1,1,1,1,     1,1,0,1,    1,0,     
+    -1,1,1,1,     1,1,0,1,        
     // 左-右-上
-    -1,1,-1,1,    1,1,0,1,    1,1,     
+    -1,1,-1,1,    1,1,0,1,        
     // 左-左-下
-    -1,-1,1,1,    1,1,0,1,    0,0,
+    -1,-1,1,1,    1,1,0,1,    
 
 
     // 右-左-上
-    1,-1,1,1,     1,1,0,1,    0,1,
+    1,-1,1,1,     1,1,0,1,    
     // 右-左-下
-    1,-1,-1,1,    1,1,0,1,    0,0,
+    1,-1,-1,1,    1,1,0,1,    
     // 右-右-上
-    1,1,1,1,      1,1,0,1,    1,1,
+    1,1,1,1,      1,1,0,1,    
     // 右-右-下
-    1,1,-1,1,     1,1,0,1,    1,0,  
+    1,1,-1,1,     1,1,0,1,    
     // 右-右-上
-    1,1,1,1,      1,1,0,1,    1,1,        
+    1,1,1,1,      1,1,0,1,        
     // 右-左-下
-    1,-1,-1,1,    1,1,0,1,    0,0,
+    1,-1,-1,1,    1,1,0,1,    
 
 
 
     /**看单面 视图上方向需要改为x轴 */
 
     // 上-左-上
-    -1,1,-1,1,    1,0,0,1,    0,1,
+    -1,1,-1,1,    1,0,0,1,    
     // 上-左-下
-    -1,1,1,1,     1,0,0,1,    0,0,
+    -1,1,1,1,     1,0,0,1,    
     // 上-右-上
-    1,1,-1,1,     1,0,0,1,    1,1,
+    1,1,-1,1,     1,0,0,1,    
     // 上-右-下
-    1,1,1,1,      1,0,0,1,    1,0,   
+    1,1,1,1,      1,0,0,1,     
     // 上-右-上
-    1,1,-1,1,     1,0,0,1,    1,1,    
+    1,1,-1,1,     1,0,0,1,      
     // 上-左-下
-    -1,1,1,1,     1,0,0,1,    0,0,
+    -1,1,1,1,     1,0,0,1,   
 
 
 
     // 下-左-上
-    1,-1,-1,1,   1,1,0,1,    0,1,
+    1,-1,-1,1,   1,1,0,1,    
     // 下-左-下
-    1,-1,1,1,  1,1,0,1,    0,0,
+    1,-1,1,1,  1,1,0,1,    
     // 下-右-上
-    -1,-1,-1,1,    1,1,0,1,    1,1,
+    -1,-1,-1,1,    1,1,0,1,    
     // 下-右-下
-    -1,-1,1,1,   1,1,0,1,   1,0,  
+    -1,-1,1,1,   1,1,0,1,     
     // 下-右-上
-    -1,-1,-1,1,    1,1,0,1,    1,1,    
+    -1,-1,-1,1,    1,1,0,1,       
     // 下-左-下
-    1,-1,1,1,  1,1,0,1,    0,0,
+    1,-1,1,1,  1,1,0,1,    
 
 
             
   ]);
+
+  /**法向量 */
+  let normals = new Float32Array([
+    /**前面 */
+    0.0, 0.0, 1.0,
+    0.0, 0.0, 1.0,
+    0.0, 0.0, 1.0,
+    0.0, 0.0, 1.0,  
+    0.0, 0.0, 1.0, 
+    0.0, 0.0, 1.0, 
+
+    /**后面 */
+
+    0.0, 0.0, -1.0,
+    0.0, 0.0, -1.0,
+    0.0, 0.0, -1.0,
+    0.0, 0.0, -1.0,  
+    0.0, 0.0, -1.0, 
+    0.0, 0.0, -1.0, 
+
+    /**左 */
+    -1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0,
+
+    /**右 */
+    1.0,0.0,0.0,
+    1.0,0.0,0.0,
+    1.0,0.0,0.0,
+    1.0,0.0,0.0,
+    1.0,0.0,0.0,
+    1.0,0.0,0.0,
+
+
+    /**上 */
+    0.0,1.0,0.0,
+    0.0,1.0,0.0,
+    0.0,1.0,0.0,
+    0.0,1.0,0.0,
+    0.0,1.0,0.0,
+    0.0,1.0,0.0,
+
+
+    /**下 */
+    0.0,-1.0,0.0,
+    0.0,-1.0,0.0,
+    0.0,-1.0,0.0,
+    0.0,-1.0,0.0,
+    0.0,-1.0,0.0,
+    0.0,-1.0,0.0,
+
+]);
 
 
   function mouseDown(e:MouseEvent) {
@@ -206,18 +282,10 @@ export default function() {
    
   }
 
-  function initBuffer(img?:HTMLImageElement) {
+  function initBuffer() {
 
-    imgElement = img || imgElement;
+    
 
-    let uniformTexture1 = webgl.getUniformLocation(program, "texture0") as  WebGLUniformLocation;
-        
-    const texture0 = webgl.createTexture() as WebGLTexture;
-  
-    webgl.activeTexture(webgl.TEXTURE0);
-    webgl.bindTexture(webgl.TEXTURE_2D, texture0);
-    webgl.uniform1i(uniformTexture1, 0);
-    handleLoadedTexture(texture0,imgElement)
 
     let aPosition = webgl.getAttribLocation(program, "a_position");
     let aColor = webgl.getAttribLocation(program, "a_color");
@@ -226,19 +294,16 @@ export default function() {
     webgl.bindBuffer(webgl.ARRAY_BUFFER,trangleBuffer);
     webgl.bufferData(webgl.ARRAY_BUFFER,pointPosition,webgl.STATIC_DRAW);
     webgl.enableVertexAttribArray(aPosition);
-    webgl.vertexAttribPointer(aPosition,4, webgl.FLOAT, false, 10*4, 0);
+    webgl.vertexAttribPointer(aPosition,4, webgl.FLOAT, false, 8*4, 0);
     webgl.enableVertexAttribArray(aColor);
-    webgl.vertexAttribPointer(aColor,4, webgl.FLOAT, false, 10*4, 4*4);
+    webgl.vertexAttribPointer(aColor,4, webgl.FLOAT, false, 8*4, 4*4);
 
     mat4.identity(projMat4); 
     let uniforproj = webgl.getUniformLocation(program, "proj");
     mat4.perspective(projMat4,60 * Math.PI / 180,canvas_element.clientWidth/canvas_element.clientHeight,1,1000)
 
 
-    const uvAttributeLocation = webgl.getAttribLocation(program, 'a_uv');
 
-    webgl.enableVertexAttribArray(uvAttributeLocation);
-    webgl.vertexAttribPointer(uvAttributeLocation, 2, webgl.FLOAT, false, 10*4, 4*8);
 
     mat4.identity(ModelMatrix);
 
@@ -256,7 +321,7 @@ export default function() {
     mat4.multiply(ModelMatrixxy,ModelMatrixx,ModelMatrixy);
 
     mat4.identity(ViewMatrix);
-    mat4.lookAt(ViewMatrix, [0, 0, 5], [0, 0, 0], [0, 1, 0]);
+    mat4.lookAt(ViewMatrix, [5, 5, 5], [0, 0, 0], [0, 1, 0]);
 
     mat4.identity(mvMatrix);
 
@@ -267,7 +332,46 @@ export default function() {
     mat4.multiply(mvpMatrix,projMat4,mvMatrix)
 
     webgl.uniformMatrix4fv(uniforproj, false, mvpMatrix);
-        
+
+
+    /**设置光源 */
+    let u_LightColor = webgl.getUniformLocation(program,"u_LightColor");
+    webgl.uniform3f(u_LightColor,1.0,1.0,1.0);
+
+    // 设置光方向
+    let u_LightDirection = webgl.getUniformLocation(program, 'u_LightDirection');
+    webgl.uniform3fv(u_LightDirection, [0.0, 0.0, 2.0]);
+
+    
+    let aNormal = webgl.getAttribLocation(program, "a_normal");
+   
+    let normalBuffer =  webgl.createBuffer();
+    webgl.bindBuffer(webgl.ARRAY_BUFFER,normalBuffer);
+    webgl.bufferData(webgl.ARRAY_BUFFER,normals,webgl.STATIC_DRAW);
+    webgl.enableVertexAttribArray(aNormal);
+    webgl.vertexAttribPointer(aNormal,3, webgl.FLOAT, false, 3*4, 0);
+
+    let u_AmbientLight = webgl.getUniformLocation(program, 'u_AmbientLight');
+    webgl.uniform3f(u_AmbientLight, 0.2, 0.2, 0.2);
+
+
+    
+    let u_normalMatrix = webgl.getUniformLocation(program, 'u_normalMatrix');
+    webgl.uniform3f(u_normalMatrix, 0.2, 0.2, 0.2);
+
+
+
+
+    let normalMatrix = mat4.create();
+    mat4.identity(normalMatrix);
+    mat4.invert(normalMatrix,ModelMatrixxy)
+    mat4.transpose(normalMatrix,normalMatrix)
+
+  webgl.uniformMatrix4fv(u_normalMatrix,false,normalMatrix)
+
+
+    
+    
   }
 
   function draw() {
@@ -279,23 +383,11 @@ export default function() {
       webgl.drawArrays(webgl.TRIANGLES, 0, 36);
   }
 
-  function initTexture(imageFile:string) {
 
-    return new Promise<HTMLImageElement>(function(resolve){
-      const image = new Image();
-      image.src = imageFile;
-      image.onload = () => {
-        resolve(image)
-      }
-    })
-  }
   
-  initTexture(Img)
-  .then((res)=>{
-    initEvent();
-    initBuffer(res);
-    draw();
-  })
+  initEvent();
+  initBuffer();
+  draw();
 
 
   
