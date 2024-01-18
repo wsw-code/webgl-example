@@ -11,5 +11,6 @@
 // import init from './examples/时钟动画实践'
 // import init from './examples/视点改变影响展示效果'
 // import init from './examples/绘制正方体'
-import init from './examples/平行光'
+// import init from './examples/平行光'
+import init from './examples/点光源'
 init()
